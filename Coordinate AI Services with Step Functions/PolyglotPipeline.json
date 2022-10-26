@@ -1,0 +1,55 @@
+{
+    "StartAt":"Start Transcribe",
+    "States":{
+      "Start Transcribe":{
+        "Type":"Task",
+        "Resource":"arn:aws:states:::lambda:invoke",
+        "Parameters":{
+            "FunctionName":"arn:aws:lambda:us-east-1:727255708612:function:start-transcribe-lambda:$LATEST",
+            "Payload":{
+              "Input.$":"$"
+            }
+        },
+        "Next":"Wait for Transcribe"
+      },
+      "Wait for Transcribe":{
+          "Type":"Wait",
+          "Seconds": 45,
+          "Next":"Check Transcribe Status"
+      },
+      "Check Transcribe Status": {
+        "Type":"Task",
+        "Resource":"arn:aws:states:::lambda:invoke",
+        "Parameters":{
+            "FunctionName":"arn:aws:lambda:us-east-1:727255708612:function:transcribe-status-lambda:$LATEST",
+            "Payload":{
+              "Input.$":"$"
+            }
+        },
+          "Next": "Is Transcribe Complete"
+      },
+      "Is Transcribe Complete":{
+          "Type":"Choice",
+          "Choices":[
+              {
+                  "Variable":"$.Payload.TranscriptionJobStatus",
+                  "StringEquals":"COMPLETED",
+                  "Next":"Transcript Available"
+              },
+              {
+                  "Variable":"$.Payload.TranscriptionJobStatus",
+                  "StringEquals":"FAILED",
+                  "Next":"Transcribe Failed"
+              }
+          ],
+          "Default":"Wait for Transcribe"
+      },
+      "Transcript Available": {
+          "Type": "Pass",
+          "End": true
+      },
+      "Transcribe Failed": {
+          "Type": "Fail"
+      }
+    }
+  }
